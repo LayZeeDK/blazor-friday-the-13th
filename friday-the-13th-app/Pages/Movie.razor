@@ -1,0 +1,104 @@
+@page "/movies/{movieId:int}"
+
+@using IMDbApiLib
+@using IMDbApiLib.Models
+
+@inject HttpClient Http
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <p><strong>Error: @error</strong></p>
+}
+else if (movie == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="container">
+        <img src="@movie.Image" alt="@movie.Title" class="img-fluid" />
+
+        <h1>@movie.FullTitle</h1>
+
+        <p class="lead">@movie.Tagline</p>
+
+        @foreach (var genre in movie.GenreList)
+        {
+            <span class="badge rounded-pill bg-secondary text-light">@genre.Value</span>
+        }
+
+        <p>@movie.Plot</p>
+
+        <dl class="row">
+            <dt class="col-sm-3">Rating</dt>
+            <dd class="col-sm-9">@movie.ContentRating</dd>
+
+            <dt class="col-sm-3">Director</dt>
+            <dd class="col-sm-9">
+                @foreach (var director in movie.DirectorList)
+                {
+                    <p>@director.Name</p>
+                }
+            </dd>
+
+            <dt class="col-sm-3">Writers</dt>
+            <dd class="col-sm-9">
+                @foreach (var writer in movie.WriterList)
+                {
+                    <p>@writer.Name</p>
+                }
+            </dd>
+
+            <dt class="col-sm-3">Stars</dt>
+            <dd class="col-sm-9">
+                @foreach (var star in movie.StarList)
+                {
+                    <p>@star.Name</p>
+                }
+            </dd>
+
+            <dt class="col-sm-3">Awards</dt>
+            <dd class="col-sm-9">
+                @movie.Awards
+            </dd>
+        </dl>
+    </div>
+}
+
+@code {
+    private string error = string.Empty;
+    private string imdbKey;
+    private TitleData movie;
+
+    [Parameter]
+    public int MovieId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        imdbKey = await Http.GetFromJsonAsync<string>("assets/imdb-api.json");
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        this.movie = null;
+
+        try {
+            var imdb = new ApiLib(imdbKey, Http);
+            var titleId = "tt" + MovieId.ToString("0000000");
+            var movie = await imdb.TitleAsync(titleId);
+
+            if (!string.IsNullOrEmpty(movie.ErrorMessage))
+            {
+                error = movie.ErrorMessage;
+            }
+            else
+            {
+                this.movie = movie;
+            }
+        }
+        catch (Exception exception)
+        {
+            error = exception.Message;
+        }
+    }
+}
